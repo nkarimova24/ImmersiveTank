@@ -1,7 +1,6 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Sprites laden
 const lowerbodyImg = new Image();
 lowerbodyImg.src = "assets/Hull_01.png";
 
@@ -16,6 +15,9 @@ gunImg.src = "assets/Gun_01.png";
 
 const grenadeImg = new Image();
 grenadeImg.src = "assets/Granade_Shell.png";
+
+const bulletImg = new Image(); 
+bulletImg.src = "assets/Exhaust_Fire.png";
 
 //tank
 const tank = {
@@ -42,13 +44,16 @@ const upperbody = {
     width: 75,  
     height: 75,    
     offsetY: -20, 
-    rotationSpeed: 5
+    rotationSpeed: 5,
+    barrelLength: 55   
 };
 
-//granaten
 const grenades = [];
 const grenadeSpeed = 3;
 const spawnInterval = 1500; 
+
+const bullets = [];
+const bulletSpeed = 7;
 
 function spawnGrenade() {
     grenades.push({
@@ -60,7 +65,6 @@ function spawnGrenade() {
     });
 }
 
-//key
 document.addEventListener("keydown", (event) => {
     if (event.key === "a" || event.key === "A") {
         tank.direction = -1;
@@ -74,6 +78,8 @@ document.addEventListener("keydown", (event) => {
     } else if (event.key === "ArrowRight") {
         upperbody.angle += upperbody.rotationSpeed;
         if (upperbody.angle > 45) upperbody.angle = 45;
+    } else if (event.key === " ") { 
+        shootBullet();
     }
 });
 
@@ -85,6 +91,24 @@ document.addEventListener("keyup", (event) => {
     }
 });
 
+function shootBullet() {
+    const radians = (upperbody.angle * Math.PI) / 180;
+    
+    const gunCenterX = tank.x + tank.width / 2;
+    const gunCenterY = tank.y + tank.height / 2 + upperbody.offsetY;
+    
+    const bulletX = gunCenterX + Math.sin(radians) * upperbody.barrelLength;
+    const bulletY = gunCenterY - Math.cos(radians) * upperbody.barrelLength;
+    
+    bullets.push({
+        x: bulletX,
+        y: bulletY,
+        angle: upperbody.angle - 90, 
+        speed: bulletSpeed,
+        width: 50, 
+        height: 50
+    });
+}
 
 function update() {
     tank.x += tank.speed * tank.direction;
@@ -110,6 +134,34 @@ function update() {
             i--;
         }
     }
+
+    for (let i = 0; i < bullets.length; i++) {
+        const radians = (bullets[i].angle * Math.PI) / 180;
+        bullets[i].x += Math.cos(radians) * bullets[i].speed;
+        bullets[i].y += Math.sin(radians) * bullets[i].speed;
+
+        //botsingdetectie
+        for (let j = 0; j < grenades.length; j++) {
+            if (
+                bullets[i] &&
+                grenades[j] &&
+                bullets[i].x < grenades[j].x + grenades[j].width &&
+                bullets[i].x + bullets[i].width > grenades[j].x &&
+                bullets[i].y < grenades[j].y + grenades[j].height &&
+                bullets[i].y + bullets[i].height > grenades[j].y
+            ) {
+                grenades.splice(j, 1);
+                bullets.splice(i, 1);
+                i--;
+                break;
+            }
+        }
+
+        if (bullets[i] && (bullets[i].x < 0 || bullets[i].x > canvas.width || bullets[i].y < 0 || bullets[i].y > canvas.height)) {
+            bullets.splice(i, 1);
+            i--;
+        }
+    }
 }
 
 function draw() {
@@ -121,7 +173,6 @@ function draw() {
 
     ctx.drawImage(trackLeftImg, -tank.width / 2 - tracks.width + tracks.offsetX, -tank.height / 2 + tracks.offsetY, tracks.width, tracks.height);
     ctx.drawImage(trackRightImg, tank.width / 2 - tracks.offsetX, -tank.height / 2 + tracks.offsetY, tracks.width, tracks.height);
-
     ctx.drawImage(lowerbodyImg, -tank.width / 2, -tank.height / 2, tank.width, tank.height);
     
     ctx.restore();
@@ -135,6 +186,25 @@ function draw() {
     for (let grenade of grenades) {
         ctx.drawImage(grenadeImg, grenade.x, grenade.y, grenade.width, grenade.height);
     }
+
+    for (let bullet of bullets) {
+        ctx.save();
+        ctx.translate(bullet.x, bullet.y);
+        ctx.rotate((bullet.angle * Math.PI) / 180);
+        ctx.drawImage(bulletImg, -bullet.width / 2, -bullet.height / 2, bullet.width, bullet.height);
+        ctx.restore();
+    }
+    
+    /*
+    if (bullets.length > 0) {
+        const lastBullet = bullets[bullets.length - 1];
+        ctx.beginPath();
+        ctx.moveTo(tank.x + tank.width / 2, tank.y + tank.height / 2 + upperbody.offsetY);
+        ctx.lineTo(lastBullet.x, lastBullet.y);
+        ctx.strokeStyle = "red";
+        ctx.stroke();
+    }
+    */
 }
 
 function gameLoop() {
@@ -148,7 +218,8 @@ Promise.all([
     new Promise(resolve => { trackLeftImg.onload = resolve; }),
     new Promise(resolve => { trackRightImg.onload = resolve; }),
     new Promise(resolve => { gunImg.onload = resolve; }),
-    new Promise(resolve => { grenadeImg.onload = resolve; })
+    new Promise(resolve => { grenadeImg.onload = resolve; }),
+    new Promise(resolve => { bulletImg.onload = resolve; })
 ]).then(() => {
     setInterval(spawnGrenade, spawnInterval);
     gameLoop();
