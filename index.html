@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
     <title>Tank Arcade Game</title>
     <style>
         body { text-align: center; background-color: #222; color: white; font-family: Arial, sans-serif; }
-        canvas { background: #444; display: block; margin: auto; border: 2px solid white; }
+        #gameContainer { display: flex; justify-content: center; align-items: center; height: 90vh; }
     </style>
 </head>
 <body>
     <h1>Tank Arcade Game</h1>
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <div id="gameContainer"></div> <!-- Phaser plaatst hier het canvas -->
     <script src="game.js"></script>
 </body>
 </html>
