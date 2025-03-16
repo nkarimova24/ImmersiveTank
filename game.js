@@ -61,10 +61,12 @@ function spawnGrenade() {
         y: -20,
         width: 75,
         height: 75,
-        speed: grenadeSpeed
+        speed: grenadeSpeed,
+        hitRadius: 45 
     });
 }
 
+//keys
 document.addEventListener("keydown", (event) => {
     if (event.key === "a" || event.key === "A") {
         tank.direction = -1;
@@ -106,8 +108,13 @@ function shootBullet() {
         angle: upperbody.angle - 90, 
         speed: bulletSpeed,
         width: 50, 
-        height: 50
+        height: 50,
+        hitRadius: 3 
     });
+}
+
+function getDistance(x1, y1, x2, y2) {
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
 function update() {
@@ -142,18 +149,26 @@ function update() {
 
         //botsingdetectie
         for (let j = 0; j < grenades.length; j++) {
-            if (
-                bullets[i] &&
-                grenades[j] &&
-                bullets[i].x < grenades[j].x + grenades[j].width &&
-                bullets[i].x + bullets[i].width > grenades[j].x &&
-                bullets[i].y < grenades[j].y + grenades[j].height &&
-                bullets[i].y + bullets[i].height > grenades[j].y
-            ) {
-                grenades.splice(j, 1);
-                bullets.splice(i, 1);
-                i--;
-                break;
+            if (bullets[i] && grenades[j]) {
+
+                const bulletCenterX = bullets[i].x + bullets[i].width / 2;
+                const bulletCenterY = bullets[i].y + bullets[i].height / 2;
+                const grenadeCenterX = grenades[j].x + grenades[j].width / 2;
+                const grenadeCenterY = grenades[j].y + grenades[j].height / 2;
+                
+                const distance = getDistance(
+                    bulletCenterX, 
+                    bulletCenterY, 
+                    grenadeCenterX, 
+                    grenadeCenterY
+                );
+                
+                if (distance < (bullets[i].hitRadius + grenades[j].hitRadius)) {
+                    grenades.splice(j, 1);
+                    bullets.splice(i, 1);
+                    i--;
+                    break;
+                }
             }
         }
 
@@ -185,6 +200,20 @@ function draw() {
 
     for (let grenade of grenades) {
         ctx.drawImage(grenadeImg, grenade.x, grenade.y, grenade.width, grenade.height);
+        
+//debug show hitbox of grenades
+        /*
+        ctx.beginPath();
+        ctx.arc(
+            grenade.x + grenade.width / 2, 
+            grenade.y + grenade.height / 2, 
+            grenade.hitRadius, 
+            0, 
+            Math.PI * 2
+        );
+        ctx.strokeStyle = "red";
+        ctx.stroke();
+        */
     }
 
     for (let bullet of bullets) {
@@ -193,18 +222,21 @@ function draw() {
         ctx.rotate((bullet.angle * Math.PI) / 180);
         ctx.drawImage(bulletImg, -bullet.width / 2, -bullet.height / 2, bullet.width, bullet.height);
         ctx.restore();
-    }
-    
-    /*
-    if (bullets.length > 0) {
-        const lastBullet = bullets[bullets.length - 1];
+        
+//debug hitbox of bullets
+        /*
         ctx.beginPath();
-        ctx.moveTo(tank.x + tank.width / 2, tank.y + tank.height / 2 + upperbody.offsetY);
-        ctx.lineTo(lastBullet.x, lastBullet.y);
-        ctx.strokeStyle = "red";
+        ctx.arc(
+            bullet.x + bullet.width / 2, 
+            bullet.y + bullet.height / 2, 
+            bullet.hitRadius, 
+            0, 
+            Math.PI * 2
+        );
+        ctx.strokeStyle = "blue";
         ctx.stroke();
+        */
     }
-    */
 }
 
 function gameLoop() {
