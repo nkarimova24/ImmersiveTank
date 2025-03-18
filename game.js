@@ -14,6 +14,11 @@ class StartScene extends Phaser.Scene {
     }
 
     create() {
+        // Initialize WebSocket when the game first loads
+        if (!window.gameSocket) {
+            this.initWebSocket();
+        }
+
         let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background");
         background.setScale(0.75);
 
@@ -28,13 +33,42 @@ class StartScene extends Phaser.Scene {
 
         this.input.keyboard.on("keydown-ENTER", () => this.startGame());
     }
+    
+    initWebSocket() {
+        window.gameSocket = new WebSocket("ws://localhost:8080");
+        
+        window.gameSocket.onopen = () => {
+            console.log("WebSocket connection established in StartScene");
+            // Send RESET command when the page first loads
+            window.gameSocket.send("RESET");
+            console.log("Initial RESET command sent");
+        };
+        
+        window.gameSocket.onclose = () => {
+            console.log("WebSocket connection closed in StartScene");
+        };
+        
+        window.gameSocket.onerror = (error) => {
+            console.error("WebSocket error in StartScene:", error);
+        };
+        
+        window.gameSocket.onmessage = (event) => {
+            console.log("WebSocket message received in StartScene:", event.data);
+        };
+    }
 
     startGame() {
+        if (this.gameOver) {
+            if (window.gameSocket && window.gameSocket.readyState === 1) { // 1 is the OPEN state
+                window.gameSocket.send("RESET");
+                console.log("Reset command sent");
+            } else {
+                console.log("Socket not ready, state:", window.gameSocket ? window.gameSocket.readyState : "undefined");
+            }
+        }
         this.scene.start("GameScene");
     }
 }
-
-
 
 class GameScene extends Phaser.Scene {
     constructor() {
@@ -94,27 +128,49 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.bullets, this.grenades, this.bulletHit, null, this);
         this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this);
 
-
         //websocket for the pi
-        this.socket = new WebSocket("ws://localhost:8080");
+        if (window.gameSocket && window.gameSocket.readyState === 1) {
+            this.socket = window.gameSocket;
+            console.log("Using existing WebSocket connection");
+        } else {
+            this.socket = new WebSocket("ws://localhost:8080");
+            window.gameSocket = this.socket;
+            console.log("Created new WebSocket connection in GameScene");
+        }
 
-        this.cursors = this.input.keyboard.createCursorKeys();
+        this.socket.onopen = () => {
+            console.log("WebSocket connection established");
+        };
+
+        this.socket.onclose = () => {
+            console.log("WebSocket connection closed");
+        };
+
+        this.socket.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
+
+        this.socket.onmessage = (event) => {
+            console.log("WebSocket message received:", event.data);
+        };
 
         this.input.keyboard.on("keydown", (event) => {
             let command = "";
-            if (this.cursors.right.isDown || event.key === "d") {
+            if (event.key === "d") {
                 command = "E"; 
-            } else if (this.cursors.left.isDown || event.key === "a") {
-                command = "D"; 
-            } else if (this.gunLeftKey.isDown || event.key === "j") {
+            } else if (event.key === "a") {
+                command = "D";
+            } else if (event.key === "j" || event.key === "ArrowLeft") {
                 command = "J"; 
-            } else if (this.gunRightKey.isDown || event.key === "l") {
+            } else if (event.key === "l" || event.key === "ArrowRight") {
                 command = "L"; 
             }
-            if (command && this.socket && this.socket.readyState === WebSocket.OPEN) {
+            
+            if (command && this.socket && this.socket.readyState === 1) {
                 this.socket.send(command);
+                console.log("Sent command:", command);
             }
-        });  
+        });
     }
 
     update() {
@@ -149,10 +205,10 @@ class GameScene extends Phaser.Scene {
         this.trackLeft.setAngle(this.tiltAngle);
         this.trackRight.setAngle(this.tiltAngle);
     
+        // gun angle 
         if (this.gunLeftKey.isDown) {
             this.gunAngle = Math.max(this.gunAngle - 2, -90);
-        }
-        if (this.gunRightKey.isDown) {
+        } else if (this.gunRightKey.isDown) {
             this.gunAngle = Math.min(this.gunAngle + 2, 90);
         }
         this.gun.setAngle(this.gunAngle);
@@ -163,9 +219,19 @@ class GameScene extends Phaser.Scene {
     
         this.gun.x = this.tank.x;
         this.gun.y = this.tank.y - -35;
+        
+        //send position data to arduino
+        if (this.socket && this.socket.readyState === 1) {
+      
+            const normalizedTankX = Math.floor((this.tank.x / 800) * 180);
+            
+            const normalizedGunAngle = Math.floor(((this.gunAngle + 90) / 180) * 180);
+            
+            const positionCommand = `POS:${normalizedTankX}:${normalizedGunAngle}`;
+            this.socket.send(positionCommand);
+        }
     }
     
-
     shootBullet() {
         const angleRad = Phaser.Math.DegToRad(this.gunAngle - 90);
         const bulletX = this.gun.x + Math.cos(angleRad) * (this.barrelLength + 10);
@@ -217,7 +283,6 @@ class GameScene extends Phaser.Scene {
         }
     }
     
-
     bulletHit(bullet, grenade) {
         bullet.destroy();
         grenade.destroy();
@@ -243,9 +308,7 @@ class GameScene extends Phaser.Scene {
             repeat: 60
         });
     }
-    
 }
-
 
 const config = {
     type: Phaser.AUTO,
