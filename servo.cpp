@@ -60,7 +60,7 @@ void loop() {
         
         // Map from 0-180 to servo pulse range (inverted for first servo)
         targetPos1 = map(tankX, 0, 180, SERVO_MAX, SERVO_MIN); // Reversed to match game
-        targetPos2 = map(gunAngle, 0, 180, SERVO_MIN, SERVO_MAX); // Reversed to match game
+        targetPos2 = map(gunAngle, 0, 180, SERVO_MAX, SERVO_MIN); // Double reversed for gun angle
         
         Serial.print("Tank X: ");
         Serial.print(tankX);
@@ -108,7 +108,7 @@ void updateServoPositions() {
 
 // Function to reset both servos to center position
 void resetServos() {
-
-    targetPos1 = SERVO_MID;
+  // Set target positions to center
+  targetPos1 = SERVO_MID;
   targetPos2 = SERVO_MID;
 }
