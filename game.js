@@ -1,3 +1,97 @@
+class StartScene extends Phaser.Scene {
+    constructor() {
+        super({ key: "StartScene" });
+    }
+
+    preload() {
+        this.load.image("startButton", "assets/start.png", { }); 
+    }
+
+ create() {
+    this.add.text(300, 200, "add txt", { fontSize: "40px", fill: "#fff" });
+
+    let startButton = this.add.sprite(400, 300, "startButton").setInteractive();
+    startButton.setScale(0.2); 
+
+    startButton.on("pointerdown", () => {
+        this.scene.start("GameScene");
+    });
+}
+
+}
+
+class GameScene extends Phaser.Scene {
+    constructor() {
+        super({ key: "GameScene" });
+    }
+
+    preload() {
+        this.load.image("tank", "assets/Hull_01.png");
+        this.load.image("trackLeft", "assets/Track_1_A.png");
+        this.load.image("trackRight", "assets/Track_1_B.png");
+        this.load.image("gun", "assets/Gun_01.png");
+        this.load.image("grenade", "assets/Granade_Shell.png");
+        this.load.image("bullet", "assets/Exhaust_Fire.png");
+    }
+
+    create() {
+        this.cameras.main.setBackgroundColor("#444");
+
+        // Tracks
+        trackLeft = this.add.sprite(400 - 40, 500 + 15, "trackLeft").setScale(0.5);
+        trackRight = this.add.sprite(400 + 40, 500 + 15, "trackRight").setScale(0.5);
+
+        // Tank body
+        tank = this.physics.add.sprite(400, 500, "tank").setCollideWorldBounds(true).setScale(0.5);
+
+        // Kanon
+        gun = this.add.sprite(tank.x - 10, tank.y - 35, "gun").setOrigin(0.5, 1).setScale(0.5);
+
+        // Besturing
+        cursors = this.input.keyboard.createCursorKeys();
+        fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        lowerLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+        lowerRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        gunLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+        gunRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+    }
+
+    update() {
+        let speed = 200;
+        let tiltFactor = 15;
+        let tiltOffset = 5;
+
+        if (lowerLeftKey.isDown) {
+            tank.setVelocityX(-speed);
+            targetTiltAngle = -tiltFactor;
+        } else if (lowerRightKey.isDown) {
+            tank.setVelocityX(speed);
+            targetTiltAngle = tiltFactor;
+        } else {
+            tank.setVelocityX(0);
+            targetTiltAngle = 0;
+        }
+
+        tiltAngle += (targetTiltAngle - tiltAngle) * 0.2;
+        let yOffset = Math.abs(tiltAngle) / tiltFactor * tiltOffset;
+
+        trackLeft.x = tank.x - 38;
+        trackLeft.y = 500 + yOffset;
+        trackRight.x = tank.x + 38;
+        trackRight.y = 500 + yOffset;
+
+        tank.setAngle(tiltAngle);
+        tank.y = 500;
+
+        trackLeft.setAngle(tiltAngle);
+        trackRight.setAngle(tiltAngle);
+
+        gun.x = tank.x;
+        gun.y = tank.y - 40;
+    }
+}
+
+// 🔥 **Update de Phaser-config om beide scenes te registreren**
 const config = {
     type: Phaser.AUTO,
     width: 800,
@@ -7,12 +101,10 @@ const config = {
         default: "arcade",
         arcade: { debug: false }
     },
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
-    }
+    scene: [StartScene, GameScene]
 };
+
+
 
 const game = new Phaser.Game(config);
 let lastCommand = "";
