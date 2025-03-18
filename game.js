@@ -40,7 +40,6 @@ function preload() {
 function create() {
     this.cameras.main.setBackgroundColor("#444");
 
-    // WebSocket verbinding
     socket = new WebSocket("ws://localhost:8765");
 
     socket.onopen = function () {
@@ -73,17 +72,17 @@ function create() {
         setTimeout(() => {
             console.log("🔄 Attempting to reconnect...");
             socket = new WebSocket("ws://localhost:8765");
-        }, 1000);  // Retry in 1 second
+        }, 1000); 
     };
     
-    // Tracks
-    trackLeft = this.add.sprite(400 - 40, 500 + 15, "trackLeft");
+    //tracks
+    trackLeft = this.add.sprite(400 - 40, 500 + 5, "trackLeft");
     trackLeft.setScale(0.5);
     
     trackRight = this.add.sprite(400 + 40, 500 + 15, "trackRight");
     trackRight.setScale(0.5);
 
-    // Tank body
+    //tank
     tank = this.physics.add.sprite(400, 500, "tank");
     tank.setCollideWorldBounds(true);
     tank.setScale(0.5);
@@ -102,7 +101,7 @@ function create() {
 
     grenades = this.physics.add.group();
 
-    // Besturing
+    //keys
     cursors = this.input.keyboard.createCursorKeys();
     fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     lowerLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -117,43 +116,37 @@ function create() {
 
 
 function update() {
-    let speed = 200; // Beweging snelheid
-    let tiltFactor = 15; // Maximale kanteling
-    let tiltOffset = 5; // Hoeveelheid visuele Y-verschuiving tijdens kantelen
+    let speed = 200;
+    let tiltFactor = 15;
+    let tiltOffset = 5; 
 
-    // Beweging en kanteling bepalen
     if (lowerLeftKey.isDown) {
-        tank.setVelocityX(-speed); // Links bewegen
+        tank.setVelocityX(-speed); 
         targetTiltAngle = -tiltFactor;
     } else if (lowerRightKey.isDown) {
-        tank.setVelocityX(speed); // Rechts bewegen
+        tank.setVelocityX(speed);
         targetTiltAngle = tiltFactor;
     } else {
         tank.setVelocityX(0);
         targetTiltAngle = 0;
     }
 
-    // Snellere en vloeiendere kanteling
     tiltAngle += (targetTiltAngle - tiltAngle) * 0.2;
 
-    // Bereken een visuele Y-offset zonder de tank echt te verplaatsen
     let yOffset = Math.abs(tiltAngle) / tiltFactor * tiltOffset;
 
-    // Tracks volgen de beweging van de tank
-    trackLeft.x = tank.x - 40;
-    trackLeft.y = 500 + yOffset;
+    trackLeft.x = tank.x - 38;
+    trackLeft.y = tank.y + yOffset + 5; 
 
-    trackRight.x = tank.x + 40;
-    trackRight.y = 500 + yOffset;
+    trackRight.x = tank.x + 38;
+    trackRight.y = tank.y + yOffset + 5;
 
-    // Tank kantelen, maar Y blijft stabiel
     tank.setAngle(tiltAngle);
-    tank.y = 500; // Houdt de tank op vaste hoogte
+    tank.y = 500;
 
     trackLeft.setAngle(tiltAngle);
     trackRight.setAngle(tiltAngle);
 
-    // Kanon los van de body bewegen
     if (gunLeftKey.isDown) {
         gunAngle -= 2;
     }
@@ -162,14 +155,12 @@ function update() {
     }
     gun.setAngle(gunAngle);
 
-    // Schieten
     if (Phaser.Input.Keyboard.JustDown(fireKey)) {
         shootBullet();
     }
 
-    // Kanon blijft correct bovenop de tank
     gun.x = tank.x;
-    gun.y = tank.y - -40;
+    gun.y = tank.y - -35;
 }
 
 
