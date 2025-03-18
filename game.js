@@ -93,6 +93,28 @@ class GameScene extends Phaser.Scene {
         //collisions
         this.physics.add.overlap(this.bullets, this.grenades, this.bulletHit, null, this);
         this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this);
+
+
+        //websocket for the pi
+        this.socket = new WebSocket("ws://localhost:8080");
+
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        this.input.keyboard.on("keydown", (event) => {
+            let command = "";
+            if (this.cursors.right.isDown || event.key === "d") {
+                command = "E"; 
+            } else if (this.cursors.left.isDown || event.key === "a") {
+                command = "D"; 
+            } else if (this.gunLeftKey.isDown || event.key === "j") {
+                command = "J"; 
+            } else if (this.gunRightKey.isDown || event.key === "l") {
+                command = "L"; 
+            }
+            if (command && this.socket && this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(command);
+            }
+        });  
     }
 
     update() {
@@ -127,7 +149,6 @@ class GameScene extends Phaser.Scene {
         this.trackLeft.setAngle(this.tiltAngle);
         this.trackRight.setAngle(this.tiltAngle);
     
-        // Beperk kanonhoek tot tussen -90 en 90 graden
         if (this.gunLeftKey.isDown) {
             this.gunAngle = Math.max(this.gunAngle - 2, -90);
         }

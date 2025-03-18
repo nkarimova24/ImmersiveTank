@@ -13,8 +13,16 @@ void setup() {
   Serial.begin(115200);
   pwm.begin();
   pwm.setPWMFreq(50);
-}
 
+  // Bereken de pulsbreedte voor 90°
+  int servo_center = (SERVO_MIN + SERVO_MAX) / 2;
+
+  // Plaats beide servomotoren op 90°
+  pwm.setPWM(SERVO_1, 0, servo_center);
+  pwm.setPWM(SERVO_2, 0, servo_center);
+
+  Serial.println("Servos staan nu op 90°.");
+}
 void loop() {
   if (Serial.available()) {
     char command = Serial.read();
