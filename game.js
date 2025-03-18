@@ -1,4 +1,3 @@
-// 🔥 StartScene: Startscherm met een knop om te beginnen
 class StartScene extends Phaser.Scene {
     constructor() {
         super({ key: "StartScene" });
@@ -20,11 +19,10 @@ class StartScene extends Phaser.Scene {
     }
 }
 
-// 🔥 GameScene: Spel zelf
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: "GameScene" });
-        this.tankHP = 100; // Tank begint met 100 HP
+        this.tankHP = 100;
         this.tiltAngle = 0;
         this.targetTiltAngle = 0;
         this.gunAngle = 0;
@@ -43,28 +41,31 @@ class GameScene extends Phaser.Scene {
         this.load.image("greenbar_2", "assets/greenbar_2.png");
         this.load.image("greenbar_3", "assets/greenbar_3.png");
 
-        console.log("Assets geladen...");
+        console.log("📦 Assets geladen...");
     }
 
     create() {
         this.cameras.main.setBackgroundColor("#444");
 
-        // Health bars
+        //healthbar
         this.healthBar1 = this.add.image(100, 50, "greenbar_1").setScale(0.5).setVisible(true);
         this.healthBar2 = this.add.image(100, 50, "greenbar_2").setScale(0.5).setVisible(true);
         this.healthBar3 = this.add.image(100, 50, "greenbar_3").setScale(0.5).setVisible(false);
 
-        // Tracks
+        //tracks
         this.trackLeft = this.add.sprite(400 - 40, 500 + 5, "trackLeft").setScale(0.5);
         this.trackRight = this.add.sprite(400 + 40, 500 + 5, "trackRight").setScale(0.5);
 
-        // Tank body
+        //tank
         this.tank = this.physics.add.sprite(400, 500, "tank").setCollideWorldBounds(true).setScale(0.5);
 
-        // Kanon
+        //kanon
         this.gun = this.add.sprite(this.tank.x, this.tank.y - 35, "gun").setOrigin(0.5, 1).setScale(0.5);
 
-        // Besturing
+
+        this.grenades = this.physics.add.group();
+
+        //keys
         this.cursors = this.input.keyboard.createCursorKeys();
         this.fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.lowerLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -75,9 +76,16 @@ class GameScene extends Phaser.Scene {
         this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
         this.grenades = this.physics.add.group();
 
+        //spawn nades every 2 seconds
         this.time.addEvent({ delay: 2000, callback: this.spawnGrenade, callbackScope: this, loop: true });
 
+        this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this);
+
+        //botsingdetectie
+        this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
         this.physics.add.overlap(this.bullets, this.grenades, this.bulletHit, null, this);
+
+        this.time.addEvent({ delay: 2000, callback: this.spawnGrenade, callbackScope: this, loop: true });
     }
 
     update() {
@@ -96,6 +104,7 @@ class GameScene extends Phaser.Scene {
             this.targetTiltAngle = 0;
         }
 
+        //smooth tank movements
         this.tiltAngle += (this.targetTiltAngle - this.tiltAngle) * 0.2;
 
         let yOffset = Math.abs(this.tiltAngle) / tiltFactor * tiltOffset;
@@ -128,6 +137,25 @@ class GameScene extends Phaser.Scene {
         this.gun.y = this.tank.y - 35;
     }
 
+    tankHit(tank, grenade) {
+        grenade.destroy();
+    
+        this.tankHP -= 15; 
+        if (this.tankHP < 0) this.tankHP = 0; 
+    
+        console.log(`🔥 Tank geraakt! HP: ${this.tankHP}`);
+    
+        this.updateHealthBar(); 
+    
+        this.tweens.add({
+            targets: [this.tank, this.trackLeft, this.trackRight, this.gun],
+            alpha: 0.5,
+            duration: 100,
+            yoyo: true,
+            repeat: 3
+        });
+    }
+    
     shootBullet() {
         const angleRad = Phaser.Math.DegToRad(this.gunAngle - 90);
         const bulletX = this.gun.x + Math.cos(angleRad) * (this.barrelLength + 10);
@@ -169,28 +197,19 @@ class GameScene extends Phaser.Scene {
     bulletHit(bullet, grenade) {
         bullet.destroy();
         grenade.destroy();
-
-        // HP verminderen
         this.tankHP -= 15;
         if (this.tankHP < 0) this.tankHP = 0;
-
-        // Health bar updaten
         this.updateHealthBar();
     }
 }
 
-// **Phaser-config met beide scenes**
 const config = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
     parent: "gameContainer",
-    physics: {
-        default: "arcade",
-        arcade: { debug: false }
-    },
+    physics: { default: "arcade", arcade: { debug: false } },
     scene: [StartScene, GameScene]
 };
-
 
 const game = new Phaser.Game(config);
