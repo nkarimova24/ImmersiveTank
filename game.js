@@ -14,17 +14,17 @@ class StartScene extends Phaser.Scene {
     }
 
     create() {
-        let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background"); 
+        let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background");
         background.setScale(0.75);
 
         let buttonImage = this.gameOver ? "replayButton" : "playButton";
 
-        let playButton = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, buttonImage).setInteractive();
-        playButton.setScale(0.55);
+        let actionButton = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, buttonImage).setInteractive();
+        actionButton.setScale(0.55);
 
-        playButton.on("pointerover", () => playButton.setScale(0.6));
-        playButton.on("pointerout", () => playButton.setScale(0.55));
-        playButton.on("pointerdown", () => this.startGame());
+        actionButton.on("pointerover", () => actionButton.setScale(0.6));
+        actionButton.on("pointerout", () => actionButton.setScale(0.55));
+        actionButton.on("pointerdown", () => this.startGame());
 
         this.input.keyboard.on("keydown-ENTER", () => this.startGame());
     }
@@ -33,6 +33,7 @@ class StartScene extends Phaser.Scene {
         this.scene.start("GameScene");
     }
 }
+
 
 
 class GameScene extends Phaser.Scene {
@@ -52,33 +53,29 @@ class GameScene extends Phaser.Scene {
         this.load.image("gun", "assets/Gun_01.png");
         this.load.image("grenade", "assets/Granade_Shell.png");
         this.load.image("bullet", "assets/Exhaust_Fire.png");
-
-        this.load.image("greenbar_1", "assets/greenbar_1.png");
-        this.load.image("greenbar_2", "assets/greenbar_2.png");
-        this.load.image("greenbar_3", "assets/greenbar_3.png");
-
-        console.log("Assets geladen...");
     }
 
     create() {
         this.cameras.main.setBackgroundColor("#444");
 
-        //healthbar
-        this.healthBar1 = this.add.image(100, 50, "greenbar_1").setScale(0.5).setVisible(true);
-        this.healthBar2 = this.add.image(100, 50, "greenbar_2").setScale(0.5).setVisible(true);
-        this.healthBar3 = this.add.image(100, 50, "greenbar_3").setScale(0.5).setVisible(false);
+        // HP weergave
+        this.hpText = this.add.text(20, 20, `HP: ${this.tankHP}`, {
+            fontFamily: "Squada One",
+            fontSize: "32px",
+            fill: "#FFFFFF",
+        });
 
-        //tracks
+        // Tracks
         this.trackLeft = this.add.sprite(400 - 40, 500 + 5, "trackLeft").setScale(0.5);
         this.trackRight = this.add.sprite(400 + 40, 500 + 5, "trackRight").setScale(0.5);
 
-        //tank
+        // Tank body
         this.tank = this.physics.add.sprite(400, 500, "tank").setCollideWorldBounds(true).setScale(0.5);
 
-        //kanon
+        // Kanon
         this.gun = this.add.sprite(this.tank.x, this.tank.y - 35, "gun").setOrigin(0.5, 1).setScale(0.5);
 
-        //keys
+        // Besturing
         this.cursors = this.input.keyboard.createCursorKeys();
         this.fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.lowerLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -86,13 +83,16 @@ class GameScene extends Phaser.Scene {
         this.gunLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
         this.gunRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
 
+        // **Kogels en granaten**
         this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
         this.grenades = this.physics.add.group();
 
+        // **Granaten spawnen elke 2 seconden**
         this.time.addEvent({ delay: 2000, callback: this.spawnGrenade, callbackScope: this, loop: true });
 
+        // **Collisions**
         this.physics.add.overlap(this.bullets, this.grenades, this.bulletHit, null, this);
-        this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this); // Tank raakt granaat
+        this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this);
     }
 
     update() {
@@ -140,7 +140,7 @@ class GameScene extends Phaser.Scene {
         }
 
         this.gun.x = this.tank.x;
-        this.gun.y = this.tank.y - 35;
+        this.gun.y = this.tank.y - -35;
     }
 
     shootBullet() {
@@ -156,29 +156,45 @@ class GameScene extends Phaser.Scene {
                 Math.cos(angleRad) * 400,
                 Math.sin(angleRad) * 400
             );
+
+            // **Verwijder kogel na 3 seconden**
+            this.time.delayedCall(3000, () => bullet.destroy());
         }
     }
 
-    updateHealthBar() {
-        if (this.tankHP > 50) {
-            this.healthBar1.setVisible(true);
-            this.healthBar2.setVisible(true);
-            this.healthBar3.setVisible(false);
-        } else if (this.tankHP > 15) {
-            this.healthBar1.setVisible(false);
-            this.healthBar2.setVisible(true);
-            this.healthBar3.setVisible(true);
-        } else {
-            this.healthBar1.setVisible(false);
-            this.healthBar2.setVisible(false);
-            this.healthBar3.setVisible(true);
-        }
-    }
+    tankHit(tank, grenade) {
+        grenade.destroy();
+        this.tankHP -= 15;
 
-    spawnGrenade() {
-        let xPos = Phaser.Math.Between(50, 750);
-        let grenade = this.grenades.create(xPos, -20, "grenade");
-        grenade.setVelocityY(200);
+        // **Update de HP tekst**
+        this.hpText.setText(`HP: ${this.tankHP}`);
+
+        // **-15 animatie**
+        let damageText = this.add.text(tank.x, tank.y - 50, "-15", {
+            fontFamily: "Squada One",
+            fontSize: "28px",
+            fill: "#FF0000",
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: damageText,
+            y: tank.y - 70,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => damageText.destroy()
+        });
+
+        this.tweens.add({
+            targets: this.tank,
+            alpha: 0.5,
+            duration: 100,
+            yoyo: true,
+            repeat: 4
+        });
+
+        if (this.tankHP <= 0) {
+            this.gameOver();
+        }
     }
 
     bulletHit(bullet, grenade) {
@@ -186,31 +202,30 @@ class GameScene extends Phaser.Scene {
         grenade.destroy();
     }
 
-    tankHit(tank, grenade) {
-        grenade.destroy();
-        this.tankHP -= 15;
+    spawnGrenade() {
+        const grenadeX = Phaser.Math.Between(50, 750);
+        const grenade = this.grenades.create(grenadeX, 0, "grenade");
+        grenade.setVelocity(0, 200);
         
-        if (this.tankHP <= 0) {
-            this.tankHP = 0;
-            this.gameOver();
-        }
+
+        grenade.setCollideWorldBounds(false);
         
-        this.updateHealthBar();
-        
-        this.tweens.add({
-            targets: this.tank,
-            alpha: 0, 
-            duration: 100,  
-            yoyo: true,
-            repeat: 3  
+
+        this.time.addEvent({
+            delay: 100,
+            callback: () => {
+                if (grenade.active && grenade.y > this.cameras.main.height) {
+                    grenade.destroy();
+                }
+            },
+            callbackScope: this,
+            loop: true,
+            repeat: 60
         });
     }
-    
-
-    gameOver() {
-        this.scene.start("StartScene", { gameOver: true });
-    }
 }
+
+
 
 
 const config = {
