@@ -115,65 +115,61 @@ function create() {
 
 
 function update() {
-    let currentCommand = ""; 
+    let speed = 200; // Beweging snelheid
+    let tiltFactor = 15; // Maximale kanteling
+    let tiltOffset = 5; // Hoeveelheid visuele Y-verschuiving tijdens kantelen
 
+    // Beweging en kanteling bepalen
     if (lowerLeftKey.isDown) {
-        targetTiltAngle = -10;
-        currentCommand = "A";
+        tank.setVelocityX(-speed); // Links bewegen
+        targetTiltAngle = -tiltFactor;
     } else if (lowerRightKey.isDown) {
-        targetTiltAngle = 10;
-        currentCommand = "D";
+        tank.setVelocityX(speed); // Rechts bewegen
+        targetTiltAngle = tiltFactor;
     } else {
+        tank.setVelocityX(0);
         targetTiltAngle = 0;
-        currentCommand = "M";
     }
-    
-    // Send command to WebSocket
-    if (currentCommand !== lastCommand) {
-        socket.send(currentCommand);
-        lastCommand = currentCommand;
-    }
-    
-    // Easing for smoother tank tilt angle
-    tiltAngle += (targetTiltAngle - tiltAngle) * 0.1;
-    
-    // Update tank visuals
+
+    // Snellere en vloeiendere kanteling
+    tiltAngle += (targetTiltAngle - tiltAngle) * 0.2;
+
+    // Bereken een visuele Y-offset zonder de tank echt te verplaatsen
+    let yOffset = Math.abs(tiltAngle) / tiltFactor * tiltOffset;
+
+    // Tracks volgen de beweging van de tank
     trackLeft.x = tank.x - 40;
-    trackLeft.y = tank.y + 5;
-    
+    trackLeft.y = 500 + yOffset;
+
     trackRight.x = tank.x + 40;
-    trackRight.y = tank.y + 5;
-    
+    trackRight.y = 500 + yOffset;
+
+    // Tank kantelen, maar Y blijft stabiel
     tank.setAngle(tiltAngle);
+    tank.y = 500; // Houdt de tank op vaste hoogte
+
     trackLeft.setAngle(tiltAngle);
     trackRight.setAngle(tiltAngle);
 
-    let gunCommand = "";
+    // Kanon los van de body bewegen
     if (gunLeftKey.isDown) {
         gunAngle -= 2;
-        if (gunAngle < -90) gunAngle = -90;
-        gunCommand = "L";
     }
     if (gunRightKey.isDown) {
         gunAngle += 2;
-        if (gunAngle > 90) gunAngle = 90;
-        gunCommand = "R";
     }
     gun.setAngle(gunAngle);
 
-    if (gunCommand !== "" && gunCommand !== lastCommand) {
-        socket.send(gunCommand);
-        lastCommand = gunCommand;
-    }
-
+    // Schieten
     if (Phaser.Input.Keyboard.JustDown(fireKey)) {
         shootBullet();
-        socket.send("F");
     }
 
+    // Kanon blijft correct bovenop de tank
     gun.x = tank.x;
     gun.y = tank.y - 20;
 }
+
 
 
 function shootBullet() {
