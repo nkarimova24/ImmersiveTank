@@ -3,22 +3,27 @@ class StartScene extends Phaser.Scene {
         super({ key: "StartScene" });
     }
 
+    init(data) {
+        this.gameOver = data.gameOver || false;
+    }
+
     preload() {
         this.load.image("background", "assets/rectangle.png");
         this.load.image("playButton", "assets/Play.png");
+        this.load.image("replayButton", "assets/Replay.png");
     }
 
     create() {
+        let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background"); 
+        background.setScale(0.75);
 
-        let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background"); //rectangle.png
-        background.setScale(0.75); 
+        let buttonImage = this.gameOver ? "replayButton" : "playButton";
 
-        let playButton = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, "playButton").setInteractive();
-        playButton.setScale(0.55); 
+        let playButton = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, buttonImage).setInteractive();
+        playButton.setScale(0.55);
 
         playButton.on("pointerover", () => playButton.setScale(0.6));
-        playButton.on("pointerout", () => playButton.setScale(0.5));
-
+        playButton.on("pointerout", () => playButton.setScale(0.55));
         playButton.on("pointerdown", () => this.startGame());
 
         this.input.keyboard.on("keydown-ENTER", () => this.startGame());
@@ -52,7 +57,7 @@ class GameScene extends Phaser.Scene {
         this.load.image("greenbar_2", "assets/greenbar_2.png");
         this.load.image("greenbar_3", "assets/greenbar_3.png");
 
-        console.log("📦 Assets geladen...");
+        console.log("Assets geladen...");
     }
 
     create() {
@@ -73,9 +78,6 @@ class GameScene extends Phaser.Scene {
         //kanon
         this.gun = this.add.sprite(this.tank.x, this.tank.y - 35, "gun").setOrigin(0.5, 1).setScale(0.5);
 
-
-        this.grenades = this.physics.add.group();
-
         //keys
         this.cursors = this.input.keyboard.createCursorKeys();
         this.fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -87,16 +89,10 @@ class GameScene extends Phaser.Scene {
         this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
         this.grenades = this.physics.add.group();
 
-        //spawn nades every 2 seconds
         this.time.addEvent({ delay: 2000, callback: this.spawnGrenade, callbackScope: this, loop: true });
 
-        this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this);
-
-        //botsingdetectie
-        this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
         this.physics.add.overlap(this.bullets, this.grenades, this.bulletHit, null, this);
-
-        this.time.addEvent({ delay: 2000, callback: this.spawnGrenade, callbackScope: this, loop: true });
+        this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this); // Tank raakt granaat
     }
 
     update() {
@@ -115,7 +111,6 @@ class GameScene extends Phaser.Scene {
             this.targetTiltAngle = 0;
         }
 
-        //smooth tank movements
         this.tiltAngle += (this.targetTiltAngle - this.tiltAngle) * 0.2;
 
         let yOffset = Math.abs(this.tiltAngle) / tiltFactor * tiltOffset;
@@ -148,25 +143,6 @@ class GameScene extends Phaser.Scene {
         this.gun.y = this.tank.y - 35;
     }
 
-    tankHit(tank, grenade) {
-        grenade.destroy();
-    
-        this.tankHP -= 15; 
-        if (this.tankHP < 0) this.tankHP = 0; 
-    
-        console.log(`🔥 Tank geraakt! HP: ${this.tankHP}`);
-    
-        this.updateHealthBar(); 
-    
-        this.tweens.add({
-            targets: [this.tank, this.trackLeft, this.trackRight, this.gun],
-            alpha: 0.5,
-            duration: 100,
-            yoyo: true,
-            repeat: 3
-        });
-    }
-    
     shootBullet() {
         const angleRad = Phaser.Math.DegToRad(this.gunAngle - 90);
         const bulletX = this.gun.x + Math.cos(angleRad) * (this.barrelLength + 10);
@@ -208,11 +184,34 @@ class GameScene extends Phaser.Scene {
     bulletHit(bullet, grenade) {
         bullet.destroy();
         grenade.destroy();
+    }
+
+    tankHit(tank, grenade) {
+        grenade.destroy();
         this.tankHP -= 15;
-        if (this.tankHP < 0) this.tankHP = 0;
+        
+        if (this.tankHP <= 0) {
+            this.tankHP = 0;
+            this.gameOver();
+        }
+        
         this.updateHealthBar();
+        
+        this.tweens.add({
+            targets: this.tank,
+            alpha: 0, 
+            duration: 100,  
+            yoyo: true,
+            repeat: 3  
+        });
+    }
+    
+
+    gameOver() {
+        this.scene.start("StartScene", { gameOver: true });
     }
 }
+
 
 const config = {
     type: Phaser.AUTO,
