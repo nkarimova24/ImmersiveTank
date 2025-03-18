@@ -4,20 +4,31 @@ class StartScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image("startButton", "assets/start.png");
+        this.load.image("background", "assets/rectangle.png");
+        this.load.image("playButton", "assets/Play.png");
     }
 
     create() {
-        this.add.text(300, 200, "Tank Battle!", { fontSize: "40px", fill: "#fff" });
 
-        let startButton = this.add.sprite(400, 300, "startButton").setInteractive();
-        startButton.setScale(0.2);
+        let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background"); //rectangle.png
+        background.setScale(0.75); 
 
-        startButton.on("pointerdown", () => {
-            this.scene.start("GameScene");
-        });
+        let playButton = this.add.sprite(this.cameras.main.centerX, this.cameras.main.centerY, "playButton").setInteractive();
+        playButton.setScale(0.55); 
+
+        playButton.on("pointerover", () => playButton.setScale(0.6));
+        playButton.on("pointerout", () => playButton.setScale(0.5));
+
+        playButton.on("pointerdown", () => this.startGame());
+
+        this.input.keyboard.on("keydown-ENTER", () => this.startGame());
+    }
+
+    startGame() {
+        this.scene.start("GameScene");
     }
 }
+
 
 class GameScene extends Phaser.Scene {
     constructor() {
