@@ -58,24 +58,24 @@ class GameScene extends Phaser.Scene {
     create() {
         this.cameras.main.setBackgroundColor("#444");
 
-        // HP weergave
+        //hp
         this.hpText = this.add.text(20, 20, `HP: ${this.tankHP}`, {
             fontFamily: "Squada One",
             fontSize: "32px",
             fill: "#FFFFFF",
         });
 
-        // Tracks
+        //tracks
         this.trackLeft = this.add.sprite(400 - 40, 500 + 5, "trackLeft").setScale(0.5);
         this.trackRight = this.add.sprite(400 + 40, 500 + 5, "trackRight").setScale(0.5);
 
-        // Tank body
+        //tank
         this.tank = this.physics.add.sprite(400, 500, "tank").setCollideWorldBounds(true).setScale(0.5);
 
-        // Kanon
+        //kanon
         this.gun = this.add.sprite(this.tank.x, this.tank.y - 35, "gun").setOrigin(0.5, 1).setScale(0.5);
 
-        // Besturing
+        //keys
         this.cursors = this.input.keyboard.createCursorKeys();
         this.fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.lowerLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -83,14 +83,14 @@ class GameScene extends Phaser.Scene {
         this.gunLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
         this.gunRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
 
-        // **Kogels en granaten**
+        //bullets and nades
         this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
         this.grenades = this.physics.add.group();
 
-        // **Granaten spawnen elke 2 seconden**
+        //
         this.time.addEvent({ delay: 2000, callback: this.spawnGrenade, callbackScope: this, loop: true });
 
-        // **Collisions**
+        //collisions
         this.physics.add.overlap(this.bullets, this.grenades, this.bulletHit, null, this);
         this.physics.add.collider(this.tank, this.grenades, this.tankHit, null, this);
     }
@@ -99,7 +99,7 @@ class GameScene extends Phaser.Scene {
         let speed = 200;
         let tiltFactor = 15;
         let tiltOffset = 5;
-
+    
         if (this.lowerLeftKey.isDown) {
             this.tank.setVelocityX(-speed);
             this.targetTiltAngle = -tiltFactor;
@@ -110,38 +110,40 @@ class GameScene extends Phaser.Scene {
             this.tank.setVelocityX(0);
             this.targetTiltAngle = 0;
         }
-
+    
         this.tiltAngle += (this.targetTiltAngle - this.tiltAngle) * 0.2;
-
+    
         let yOffset = Math.abs(this.tiltAngle) / tiltFactor * tiltOffset;
-
+    
         this.trackLeft.x = this.tank.x - 38;
         this.trackLeft.y = this.tank.y + yOffset + 5;
-
+    
         this.trackRight.x = this.tank.x + 38;
         this.trackRight.y = this.tank.y + yOffset + 5;
-
+    
         this.tank.setAngle(this.tiltAngle);
         this.tank.y = 500;
-
+    
         this.trackLeft.setAngle(this.tiltAngle);
         this.trackRight.setAngle(this.tiltAngle);
-
+    
+        // Beperk kanonhoek tot tussen -90 en 90 graden
         if (this.gunLeftKey.isDown) {
-            this.gunAngle -= 2;
+            this.gunAngle = Math.max(this.gunAngle - 2, -90);
         }
         if (this.gunRightKey.isDown) {
-            this.gunAngle += 2;
+            this.gunAngle = Math.min(this.gunAngle + 2, 90);
         }
         this.gun.setAngle(this.gunAngle);
-
+    
         if (Phaser.Input.Keyboard.JustDown(this.fireKey)) {
             this.shootBullet();
         }
-
+    
         this.gun.x = this.tank.x;
         this.gun.y = this.tank.y - -35;
     }
+    
 
     shootBullet() {
         const angleRad = Phaser.Math.DegToRad(this.gunAngle - 90);
@@ -157,7 +159,6 @@ class GameScene extends Phaser.Scene {
                 Math.sin(angleRad) * 400
             );
 
-            // **Verwijder kogel na 3 seconden**
             this.time.delayedCall(3000, () => bullet.destroy());
         }
     }
@@ -165,17 +166,15 @@ class GameScene extends Phaser.Scene {
     tankHit(tank, grenade) {
         grenade.destroy();
         this.tankHP -= 15;
-
-        // **Update de HP tekst**
+    
         this.hpText.setText(`HP: ${this.tankHP}`);
-
-        // **-15 animatie**
+    
         let damageText = this.add.text(tank.x, tank.y - 50, "-15", {
             fontFamily: "Squada One",
             fontSize: "28px",
             fill: "#FF0000",
         }).setOrigin(0.5);
-
+    
         this.tweens.add({
             targets: damageText,
             y: tank.y - 70,
@@ -183,7 +182,7 @@ class GameScene extends Phaser.Scene {
             duration: 800,
             onComplete: () => damageText.destroy()
         });
-
+    
         this.tweens.add({
             targets: this.tank,
             alpha: 0.5,
@@ -191,11 +190,12 @@ class GameScene extends Phaser.Scene {
             yoyo: true,
             repeat: 4
         });
-
+    
         if (this.tankHP <= 0) {
-            this.gameOver();
+            this.scene.start("StartScene", { gameOver: true });
         }
     }
+    
 
     bulletHit(bullet, grenade) {
         bullet.destroy();
@@ -206,11 +206,10 @@ class GameScene extends Phaser.Scene {
         const grenadeX = Phaser.Math.Between(50, 750);
         const grenade = this.grenades.create(grenadeX, 0, "grenade");
         grenade.setVelocity(0, 200);
-        
-
         grenade.setCollideWorldBounds(false);
-        
-
+    
+        grenade.setSize(20, 20).setOffset(6, 6);
+    
         this.time.addEvent({
             delay: 100,
             callback: () => {
@@ -223,9 +222,8 @@ class GameScene extends Phaser.Scene {
             repeat: 60
         });
     }
+    
 }
-
-
 
 
 const config = {
