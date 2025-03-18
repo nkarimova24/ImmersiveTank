@@ -88,10 +88,12 @@ function create() {
     tank.setCollideWorldBounds(true);
     tank.setScale(0.5);
 
-    // Kanon
-    gun = this.add.sprite(tank.x, tank.y - 20, "gun");
+
+   //kanon
+    gun = this.add.sprite(tank.x - 10, tank.y - 35, "gun"); 
     gun.setOrigin(0.5, 1);
     gun.setScale(0.5);
+
 
     bullets = this.physics.add.group({
         defaultKey: "bullet",
@@ -167,7 +169,7 @@ function update() {
 
     // Kanon blijft correct bovenop de tank
     gun.x = tank.x;
-    gun.y = tank.y - 20;
+    gun.y = tank.y - -40;
 }
 
 
