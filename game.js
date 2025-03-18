@@ -11,10 +11,10 @@ class StartScene extends Phaser.Scene {
         this.load.image("background", "assets/rectangle.png");
         this.load.image("playButton", "assets/Play.png");
         this.load.image("replayButton", "assets/Replay.png");
+        this.load.image("pauseButton", "assets/Pause.png"); 
     }
 
     create() {
-        // Initialize WebSocket when the game first loads
         if (!window.gameSocket) {
             this.initWebSocket();
         }
@@ -39,7 +39,7 @@ class StartScene extends Phaser.Scene {
         
         window.gameSocket.onopen = () => {
             console.log("WebSocket connection established in StartScene");
-            // Send RESET command when the page first loads
+
             window.gameSocket.send("RESET");
             console.log("Initial RESET command sent");
         };
@@ -59,7 +59,7 @@ class StartScene extends Phaser.Scene {
 
     startGame() {
         if (this.gameOver) {
-            if (window.gameSocket && window.gameSocket.readyState === 1) { // 1 is the OPEN state
+            if (window.gameSocket && window.gameSocket.readyState === 1) { 
                 window.gameSocket.send("RESET");
                 console.log("Reset command sent");
             } else {
@@ -67,6 +67,48 @@ class StartScene extends Phaser.Scene {
             }
         }
         this.scene.start("GameScene");
+    }
+}
+
+class PauseScene extends Phaser.Scene {
+    constructor() {
+        super({ key: "PauseScene" });
+    }
+
+    create() {
+        console.log("PauseScene created");
+        
+        this.cameras.main.setBackgroundColor("#444");
+        
+        let background = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "background");
+        background.setScale(0.75);
+        
+        let pauseButton = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, "pauseButton");
+        pauseButton.setScale(0.55);
+        
+        console.log("Pause button added at", this.cameras.main.centerX, this.cameras.main.centerY);
+
+        this.add.text(
+            this.cameras.main.centerX, 
+            this.cameras.main.centerY + 100, 
+            "Press P or ESC to resume", 
+            {
+                fontFamily: "Arial",
+                fontSize: "24px",
+                fill: "#FFFFFF",
+            }
+        ).setOrigin(0.5);
+
+        this.input.keyboard.on("keydown-P", () => this.resumeGame());
+        this.input.keyboard.on("keydown-ESC", () => this.resumeGame());
+        
+        this.input.on('pointerdown', () => this.resumeGame());
+    }
+
+    resumeGame() {
+        console.log("Resuming game");
+        this.scene.resume("GameScene");
+        this.scene.stop();
     }
 }
 
@@ -78,6 +120,7 @@ class GameScene extends Phaser.Scene {
         this.targetTiltAngle = 0;
         this.gunAngle = 0;
         this.barrelLength = 70;
+        this.isPaused = false;
     }
 
     preload() {
@@ -116,6 +159,13 @@ class GameScene extends Phaser.Scene {
         this.lowerRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
         this.gunLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
         this.gunRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+        
+        //pausekeys
+        this.pauseKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+        this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+
+        this.input.keyboard.on('keydown-P', () => this.togglePause());
+        this.input.keyboard.on('keydown-ESC', () => this.togglePause());
 
         //bullets and nades
         this.bullets = this.physics.add.group({ defaultKey: "bullet", maxSize: 10 });
@@ -171,6 +221,22 @@ class GameScene extends Phaser.Scene {
                 console.log("Sent command:", command);
             }
         });
+    }
+
+    togglePause() {
+        if (this.isPaused) {
+            // Resume game
+            console.log("Resuming from pause");
+            this.isPaused = false;
+            this.scene.resume();
+            this.scene.stop("PauseScene");
+        } else {
+            // Pause game
+            console.log("Pausing game");
+            this.isPaused = true;
+            this.scene.pause();
+            this.scene.launch("PauseScene");
+        }
     }
 
     update() {
@@ -316,7 +382,7 @@ const config = {
     height: 600,
     parent: "gameContainer",
     physics: { default: "arcade", arcade: { debug: false } },
-    scene: [StartScene, GameScene]
+    scene: [StartScene, PauseScene, GameScene]
 };
 
 const game = new Phaser.Game(config);

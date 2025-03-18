@@ -1,6 +1,7 @@
 const { SerialPort } = require("serialport");
 const WebSocket = require("ws");
 
+//verander hier path COM3 indien nodig is, COM1, COM2, COM3, COM4
 const port = new SerialPort({ path: "COM3", baudRate: 115200 });
 const wss = new WebSocket.Server({ port: 8080 });
 

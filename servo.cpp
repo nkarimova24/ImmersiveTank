@@ -1,54 +1,51 @@
+//kopieer en plak de inhoud in de Arduino IDE en upload het naar je Arduino :)
+
+
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
-#define SERVO_1 14  // Servo for tank body
-#define SERVO_2 15  // Servo for cannon
-#define SERVO_MIN 102  // Pulse width for 0°
-#define SERVO_MAX 512  // Pulse width for 180°
-#define SERVO_MID 307  // Pulse width for 90° (middle position)
+#define SERVO_1 14  //tank body
+#define SERVO_2 15  //kanon
+#define SERVO_MIN 102 
+#define SERVO_MAX 512  
+#define SERVO_MID 307  
 
-// Current positions
 int currentPos1 = SERVO_MID;
 int currentPos2 = SERVO_MID;
 
-// Target positions
 int targetPos1 = SERVO_MID;
 int targetPos2 = SERVO_MID;
 
-// Movement speed (lower = smoother but slower)
-const int MOVE_STEP = 3;  // How many units to move per update
 
-// Timer for smooth updates
+const int MOVE_STEP = 3;
+
 unsigned long lastUpdateTime = 0;
-const int UPDATE_INTERVAL = 10;  // milliseconds between position updates
+const int UPDATE_INTERVAL = 10;  
 
 void setup() {
   Serial.begin(115200);
   pwm.begin();
-  pwm.setPWMFreq(50);  // Standard frequency for servo motors
+  pwm.setPWMFreq(50);  
   
-  // Initialize servos to center position
   resetServos();
   Serial.println("Arduino initialized, servos at center position");
 }
 
 void loop() {
-  // Handle incoming commands
-  if (Serial.available()) {
-    // Read entire command until newline
+
+    if (Serial.available()) {
+
     String command = Serial.readStringUntil('\n');
-    command.trim();  // Remove any whitespace
+    command.trim();  
     
-    // Print confirmation for debugging
     Serial.print("Received command: ");
     Serial.println(command);
     
-    // Check if it's a position command (POS:tankX:gunAngle)
     if (command.startsWith("POS:")) {
-      // Extract the two position values
-      int firstColon = command.indexOf(':');
+
+        int firstColon = command.indexOf(':');
       int secondColon = command.indexOf(':', firstColon + 1);
       
       if (firstColon != -1 && secondColon != -1) {
@@ -58,9 +55,8 @@ void loop() {
         int tankX = tankXStr.toInt();
         int gunAngle = gunAngleStr.toInt();
         
-        // Map from 0-180 to servo pulse range (inverted for first servo)
-        targetPos1 = map(tankX, 0, 180, SERVO_MAX, SERVO_MIN); // Reversed to match game
-        targetPos2 = map(gunAngle, 0, 180, SERVO_MAX, SERVO_MIN); // Double reversed for gun angle
+        targetPos1 = map(tankX, 0, 180, SERVO_MAX, SERVO_MIN); 
+        targetPos2 = map(gunAngle, 0, 180, SERVO_MAX, SERVO_MIN); 
         
         Serial.print("Tank X: ");
         Serial.print(tankX);
@@ -73,21 +69,20 @@ void loop() {
     }
   }
   
-  // Update servo positions gradually toward targets
   updateServoPositions();
 }
 
 void updateServoPositions() {
-  // Check if it's time to update positions
-  unsigned long currentTime = millis();
+
+    unsigned long currentTime = millis();
   if (currentTime - lastUpdateTime < UPDATE_INTERVAL) {
-    return;  // Not time yet
+    return;  
   }
   
-  // Update time
+
   lastUpdateTime = currentTime;
   
-  // Update servo 1 position (tank body)
+  // Update servo 1 position
   if (currentPos1 < targetPos1) {
     currentPos1 = min(currentPos1 + MOVE_STEP, targetPos1);
     pwm.setPWM(SERVO_1, 0, currentPos1);
@@ -96,7 +91,7 @@ void updateServoPositions() {
     pwm.setPWM(SERVO_1, 0, currentPos1);
   }
   
-  // Update servo 2 position (cannon)
+  //update servo 2 position
   if (currentPos2 < targetPos2) {
     currentPos2 = min(currentPos2 + MOVE_STEP, targetPos2);
     pwm.setPWM(SERVO_2, 0, currentPos2);
@@ -106,9 +101,9 @@ void updateServoPositions() {
   }
 }
 
-// Function to reset both servos to center position
+//function to reset both servos to center position
 void resetServos() {
-  // Set target positions to center
+
   targetPos1 = SERVO_MID;
   targetPos2 = SERVO_MID;
 }

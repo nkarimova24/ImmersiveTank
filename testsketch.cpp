@@ -1,3 +1,4 @@
+//sketch om te testen of de servo's werken
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
